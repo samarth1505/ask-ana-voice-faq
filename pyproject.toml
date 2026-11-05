@@ -1,0 +1,21 @@
+[project]
+name = "voice-faq-agent"
+version = "0.1.0"
+description = "Voice FAQ Agent for Payments — POC (offline-first core)"
+requires-python = ">=3.11"
+
+# The OFFLINE CORE needs nothing beyond the stdlib — it runs and tests on Python 3.14
+# with zero binary wheels. The groups below are only pulled in when wiring the REAL
+# adapters (cloud APIs + local models), which we defer and will install into a 3.12 venv.
+[project.optional-dependencies]
+retrieval = ["opensearch-py>=2.6", "psycopg[binary]>=3.2", "pgvector>=0.3"]
+models = ["sentence-transformers>=3.0", "onnxruntime>=1.18"]
+cloud = ["httpx>=0.27"]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

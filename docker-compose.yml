@@ -1,0 +1,37 @@
+# Local self-hosted stack for the POC. Start with:  docker compose up -d
+# Only two containers: OpenSearch (BM25 lexical) + Postgres/pgvector (vectors + KB meta).
+# Redis, Langfuse, Grafana, Qdrant are deferred for the POC.
+
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.17.0   # verify current 2.x tag
+    container_name: voicefaq-opensearch
+    environment:
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true              # local dev only — no TLS/auth/password
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    ports:
+      - "9200:9200"
+    volumes:
+      - os_data:/usr/share/opensearch/data
+
+  postgres:
+    image: pgvector/pgvector:pg16                 # Postgres 16 + pgvector preinstalled
+    container_name: voicefaq-postgres
+    environment:
+      - POSTGRES_USER=voicefaq
+      - POSTGRES_PASSWORD=voicefaq
+      - POSTGRES_DB=voicefaq
+    ports:
+      - "55432:5432"            # host 55432 to avoid colliding with any existing Postgres on 5432
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  os_data:
+  pg_data:

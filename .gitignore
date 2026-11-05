@@ -1,0 +1,40 @@
+# ─── Secrets — never commit ───────────────────────────────
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+.venv*/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ─── Local models / caches (large) ────────────────────────
+models/
+*.onnx
+*.gguf
+.hf_cache/
+.cache/
+
+# ─── Data / logs / local stores ───────────────────────────
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+data/
+logs/
+*.log
+
+# ─── OS / editors ─────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/

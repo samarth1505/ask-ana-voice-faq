@@ -1,0 +1,39 @@
+{"utterance": "how much do you charge per transaction", "expected": "charge per transaction"}
+{"utterance": "what are your transaction fees", "expected": "charge per transaction"}
+{"utterance": "what percent does razorpay take on each payment", "expected": "charge per transaction"}
+{"utterance": "are you pci dss compliant", "expected": "pci-dss compliant"}
+{"utterance": "is razorpay pci compliant", "expected": "pci-dss compliant"}
+{"utterance": "what does late authorisation mean", "expected": "late authorisation"}
+{"utterance": "explain late auth to me", "expected": "late authorisation"}
+{"utterance": "my customer was charged but the dashboard shows the payment failed", "expected": "money is debited from the customer"}
+{"utterance": "money got debited from the customer but payment failed what should i do", "expected": "money is debited from the customer"}
+{"utterance": "the checkout is not loading for my customers", "expected": "facing issues with the checkout"}
+{"utterance": "why is my checkout failing", "expected": "facing issues with the checkout"}
+{"utterance": "is gst mandatory to accept payments", "expected": "gst mandatory"}
+{"utterance": "do i need gst to take payments", "expected": "gst mandatory"}
+{"utterance": "how much gst is charged on the fees", "expected": "applicable gst"}
+{"utterance": "what gst rate is applied to transactions", "expected": "applicable gst"}
+{"utterance": "do you have test cards for integration", "expected": "test cards"}
+{"utterance": "give me test card numbers to try the integration", "expected": "test cards"}
+{"utterance": "how do i enable auto capture", "expected": "auto-capture"}
+{"utterance": "what is auto capture", "expected": "auto-capture"}
+{"utterance": "how do i manually capture a payment", "expected": "manually capture"}
+{"utterance": "can i accept international payments", "expected": "international payments"}
+{"utterance": "do you support cross border payments", "expected": "international payments"}
+{"utterance": "how are payments settled to my account", "expected": "settled to my account"}
+{"utterance": "when do i get my settlements", "expected": "settled to my account"}
+{"utterance": "how do customers pay using razorpay", "expected": "make payments using"}
+{"utterance": "what is standard capture", "expected": "standard capture"}
+{"utterance": "how can i test my website integration", "expected": "test our website"}
+{"utterance": "what is the weather in mumbai today", "expected": "ESCALATE"}
+{"utterance": "can you book me a flight to delhi", "expected": "ESCALATE"}
+{"utterance": "reset my netflix password please", "expected": "ESCALATE"}
+{"utterance": "what is the capital of france", "expected": "ESCALATE"}
+{"utterance": "tell me a joke about payments", "expected": "ESCALATE"}
+{"utterance": "flibberty wobble nonsense tokens here", "expected": "ESCALATE"}
+{"utterance": "asdfghjkl qwerty zxcv mnbv", "expected": "ESCALATE"}
+{"utterance": "why is my specific settlement for order 9921 delayed by three days", "expected": "ESCALATE", "note": "account-specific; KB has only generic settlement policy"}
+{"utterance": "my personal refund of 5000 rupees has not arrived in my bank", "expected": "ESCALATE", "note": "account-specific state, not a policy FAQ"}
+{"utterance": "i want to talk to a human", "expected": "ESCALATE"}
+{"utterance": "connect me to an agent", "expected": "ESCALATE"}
+{"utterance": "get me a representative right now", "expected": "ESCALATE"}

@@ -1,0 +1,12 @@
+{
+  "tau_bm25": 0.55,
+  "tau_rerank": 0.7,
+  "wrong_answers": 0,
+  "deflection": 0.778,
+  "models": {
+    "lexical": "OpenSearch(http://localhost:9200)",
+    "semantic": "pgvector(postgres)",
+    "embedder": "BGE(BAAI/bge-small-en-v1.5,384d)",
+    "reranker": "BGEReranker(BAAI/bge-reranker-v2-m3)"
+  }
+}
