@@ -9,7 +9,7 @@ const SILENCE_MS = 900;      // trailing silence that ends a turn
 const MIN_UTTER_MS = 350;    // ignore sub-blips
 const MAX_UTTER_MS = 15000;  // safety cap
 const START_FRAMES = 7;      // consecutive loud frames to begin a turn (~120ms)
-const BARGE_FRAMES = 7;      // frames of speech needed to interrupt Priya (barge-in)
+const BARGE_FRAMES = 7;      // frames of speech needed to interrupt Ask Ana (barge-in)
 
 let calling = false, state = "idle";   // idle|listening|recording|thinking|speaking
 let stream, audioCtx, analyser, buf, raf;
@@ -90,7 +90,7 @@ function render(d) {
 function speakThen(d) {
   render(d);
   if (calling && d.response && d.audio_b64) {
-    setState("speaking", "Priya is speaking… (just talk to interrupt)");
+    setState("speaking", "Ask Ana is speaking… (just talk to interrupt)");
     play(d.audio_b64, () => { if (calling) setState("listening", "Listening…"); });
   } else if (calling) {
     setState("listening", "Listening…");

@@ -1,4 +1,4 @@
-"""Interactive chat with the agent — type a question, get Priya's answer.
+"""Interactive chat with the agent — type a question, get Ask Ana's answer.
 
 Run (text only):        python3 -m vfa.chat
 Real retrieval+models:  VFA_REAL_MODELS=1 ./.venv312/bin/python -m vfa.chat
@@ -54,7 +54,7 @@ def main() -> None:
     print(f"retrieval: {backends['lexical']} / {backends['semantic']}")
     print(f"llm: {backends['llm']}   tts: {backends['tts']}   embedder: {backends['embedder']}")
     print("─" * 70)
-    print(f"\nPriya> {GREETING}")
+    print(f"\nAsk Ana> {GREETING}")
     if speak:
         _speak(settings, GREETING, 0)
 
@@ -73,7 +73,7 @@ def main() -> None:
             break
         turn += 1
         r = orch.handle_turn(call_id, turn, u)
-        print(f"\nPriya> {r.response}")
+        print(f"\nAsk Ana> {r.response}")
         hint = _OUTCOME_HINT.get(r.outcome, r.outcome)
         print(f"       · {hint} · path={r.served_path} · {r.total_latency_ms:.0f} ms")
         if speak:

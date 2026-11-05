@@ -9,7 +9,7 @@ class TestSmallTalk(unittest.TestCase):
         return r[0] if r else None
 
     def test_greetings(self):
-        for t in ["hi", "hello", "hey there", "hi priya", "good morning", "namaste"]:
+        for t in ["hi", "hello", "hey there", "hi ana", "good morning", "namaste"]:
             self.assertEqual(self._intent(t), "greeting", t)
 
     def test_thanks(self):

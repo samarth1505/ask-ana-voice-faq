@@ -14,7 +14,7 @@
 |------|----------------------|------------|------|
 | **Deepgram** | `DEEPGRAM_API_KEY` | real speech-to-text (voice transport / live demo) | free credit, then paid |
 | **Groq** | `GROQ_API_KEY` | real LLM answer synthesis (replaces the offline fake) | free tier |
-| **ElevenLabs** | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | real text-to-speech (Priya voice) | paid |
+| **ElevenLabs** | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | real text-to-speech (Ask Ana voice) | paid |
 | BGE embedder/reranker | — | nothing — public HF download | free |
 | OpenSearch / pgvector | — | nothing — local containers | free |
 
