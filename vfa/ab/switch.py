@@ -29,14 +29,8 @@ class ABSwitch:
         return self._route(utterance, lexical, semantic)
 
     def _route(self, utterance: str, lexical: PathResult, semantic: PathResult | None) -> str:
-        """Rule router: short/keyword-y queries with a confident, well-separated BM25 hit
-        go lexical; descriptive/ambiguous go semantic."""
-        top = lexical.top_score
-        margin = (lexical.retrieved[0].score - lexical.retrieved[1].score) \
-            if len(lexical.retrieved) > 1 else top
-        words = utterance.strip().lower().split()
-        starts_with_qword = bool(words) and words[0] in _QUESTION_WORDS
-        short = len(words) <= 6
-        if top >= self._s.tau_bm25 and margin >= 0.10 and (short or starts_with_qword):
-            return "lexical"
+        """LLM-first routing. The triple-lock early-exit already serves confident cache hits
+        before the router runs, so everything that reaches here should go to the semantic
+        (LLM) path to get a grounded answer — routing it to the lexical-only arm just bails on
+        a weak BM25 score and over-escalates. The lexical arm stays reachable via variant=lexical."""
         return "semantic"

@@ -1,7 +1,8 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const callBtn = $("call"), statusEl = $("status"), levelEl = $("level"),
-      logEl = $("log"), variantSel = $("variant"), backendsEl = $("backends");
+      logEl = $("log"), variantSel = $("variant"), backendsEl = $("backends"),
+      micSel = $("mic"), micRow = $("micRow");
 
 // ---- tunables (energy-based VAD; tune for your room, headphones recommended) ----
 const SILENCE_MS = 900;      // trailing silence that ends a turn
@@ -14,6 +15,7 @@ let calling = false, state = "idle";   // idle|listening|recording|thinking|spea
 let stream, audioCtx, analyser, buf, raf;
 let rec, chunks = [], recStart = 0, lastLoud = 0, loudStreak = 0, emaNoise = 0.01;
 let player = null;
+let selectedDeviceId = null, ringNodes = null, ringTimer = null;
 
 // ---------- helpers ----------
 async function postJSON(url, body) {
@@ -59,10 +61,7 @@ function play(b64, onEnd) {
 // ---- speculative filler: a short spoken ack so there's never a silent gap ----
 let fillers = [];
 async function prefetchFillers() {
-  fillers = [];
-  for (let i = 0; i < 3; i++) {
-    try { const f = await (await fetch("/api/filler")).json(); if (f.audio_b64) fillers.push(f.audio_b64); } catch (e) {}
-  }
+  try { const d = await (await fetch("/api/fillers")).json(); fillers = d.fillers || []; } catch (e) { fillers = []; }
 }
 function playFiller() {
   if (!fillers.length || !calling) return;
@@ -74,7 +73,7 @@ function playFiller() {
 async function runTurn(fetchPromise) {
   setState("thinking", "…");
   let responded = false;
-  const timer = setTimeout(() => { if (!responded) playFiller(); }, 400);
+  const timer = setTimeout(() => { if (!responded) playFiller(); }, 700);   // only when it's actually slow
   let d;
   try { d = await fetchPromise; }
   catch (e) { clearTimeout(timer); if (calling) setState("listening", "Listening…"); return; }
@@ -153,34 +152,97 @@ function loop() {
   raf = requestAnimationFrame(loop);
 }
 
+// ---------- mic devices (prefer the Mac's own mic, not the iPhone/Continuity one) ----------
+function isContinuity(label) {
+  const l = (label || "").toLowerCase();
+  return l.includes("iphone") || l.includes("ipad") || l.includes("continuity");
+}
+async function listMics() {
+  let devs = [];
+  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput"); } catch (e) {}
+  micSel.innerHTML = "";
+  devs.forEach((d) => {
+    const o = document.createElement("option");
+    o.value = d.deviceId;
+    o.textContent = (d.label || "Microphone") + (isContinuity(d.label) ? "  (phone)" : "");
+    micSel.appendChild(o);
+  });
+  micRow.hidden = devs.length === 0;
+  return devs;
+}
+function preferredDevice(devs) {
+  const local = devs.find((d) => d.label && !isContinuity(d.label));   // de-prioritize Continuity
+  return (local || devs[0] || {}).deviceId || null;
+}
+async function openMic(deviceId) {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  const base = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: deviceId ? { ...base, deviceId: { exact: deviceId } } : base });
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") await audioCtx.resume();
+  const srcNode = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024;
+  buf = new Float32Array(analyser.fftSize); srcNode.connect(analyser);
+}
+micSel.onchange = async () => {
+  selectedDeviceId = micSel.value;
+  if (calling) { try { await openMic(selectedDeviceId); } catch (e) {} }
+};
+
+// ---------- ring tone while the call connects ----------
+function startRing() {
+  stopRing();
+  const g = audioCtx.createGain(); g.gain.value = 0.0001; g.connect(audioCtx.destination);
+  const os = [440, 480].map((f) => {
+    const o = audioCtx.createOscillator(); o.type = "sine"; o.frequency.value = f; o.connect(g); o.start(); return o;
+  });
+  ringNodes = { g, os }; let on = false;
+  const beat = () => { on = !on; g.gain.setTargetAtTime(on ? 0.05 : 0.0001, audioCtx.currentTime, 0.02); };
+  beat(); ringTimer = setInterval(beat, 1100);   // ring ~1s on / ~1s off
+}
+function stopRing() {
+  if (ringTimer) { clearInterval(ringTimer); ringTimer = null; }
+  if (ringNodes && audioCtx) {
+    try { ringNodes.g.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.02);
+          ringNodes.os.forEach((o) => o.stop(audioCtx.currentTime + 0.15)); } catch (e) {}
+  }
+  ringNodes = null;
+}
+
 // ---------- call control ----------
 async function startCall() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-  } catch (e) { setState("idle", "Mic permission denied — allow the microphone and retry."); return; }
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const src = audioCtx.createMediaStreamSource(stream);
-  analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024;
-  buf = new Float32Array(analyser.fftSize); src.connect(analyser);
-
   calling = true;
-  callBtn.textContent = "End call"; callBtn.className = "call live";
-  setState("speaking", "Connecting…");
+  callBtn.textContent = "End call"; callBtn.className = "call connecting";
+  setState("speaking", "Calling…");
+  try { await openMic(selectedDeviceId); }
+  catch (e) {
+    calling = false; callBtn.textContent = "Start call"; callBtn.className = "call idle";
+    setState("idle", "Mic permission denied — allow the microphone and retry."); return;
+  }
+  const devs = await listMics();
+  if (!selectedDeviceId) {                       // first call: avoid the iPhone mic
+    const curLabel = (stream.getAudioTracks()[0] || {}).label || "";
+    const pref = preferredDevice(devs);
+    selectedDeviceId = pref; if (pref) micSel.value = pref;
+    if (pref && isContinuity(curLabel)) { try { await openMic(pref); } catch (e) {} }
+  }
+  startRing();                                   // audible "calling…" while the greeting synthesizes
   try {
     const g = await (await fetch("/api/greeting")).json();
+    stopRing(); callBtn.className = "call live";
     addMsg("her", g.response);
     play(g.audio_b64, () => { if (calling) setState("listening", "Listening…"); });
-  } catch (e) { setState("listening", "Listening…"); }
+  } catch (e) { stopRing(); callBtn.className = "call live"; setState("listening", "Listening…"); }
   prefetchFillers();
   raf = requestAnimationFrame(loop);
 }
 function endCall() {
   calling = false;
-  stopRecording(); stopPlayback();
+  stopRecording(); stopPlayback(); stopRing();
   if (raf) cancelAnimationFrame(raf);
   if (stream) stream.getTracks().forEach((t) => t.stop());
-  if (audioCtx) audioCtx.close().catch(() => {});
+  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
   callBtn.textContent = "Start call"; callBtn.className = "call idle";
   setState("idle", "Call ended. Tap “Start call” to talk again.");
   levelEl.style.width = "0%";

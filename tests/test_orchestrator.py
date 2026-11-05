@@ -52,10 +52,10 @@ class TestOrchestrator(unittest.TestCase):
             r = orch.handle_turn("c", 1, "when do refunds arrive")
             self.assertEqual(r.outcome, "escalated_grounding")
 
-    def test_weak_retrieval_escalates_unanswerable(self):
+    def test_lexical_variant_below_support_escalates_unanswerable(self):
         with tempfile.TemporaryDirectory() as d:
-            # reranker relevance can't clear a 0.99 bar -> escalate, never a wrong answer
-            s = self._settings(d, ab_variant="semantic", tau_bm25=0.99, tau_floor=0.0, tau_rerank=0.99)
+            # explicit lexical arm: BM25 support can't clear a 0.99 bar -> escalate
+            s = self._settings(d, ab_variant="lexical", tau_bm25=0.99, tau_floor=0.0, tau_answerable=0.99)
             orch = build_offline(s, KB)
             r = orch.handle_turn("c", 1, "totally unrelated gibberish tokens")
             self.assertEqual(r.outcome, "escalated_unanswerable")

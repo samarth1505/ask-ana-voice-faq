@@ -25,7 +25,11 @@ select { background: #0e1016; color: var(--ink); border: 1px solid var(--line);
 .call:active { transform: scale(.98); }
 .call.idle { background: var(--ok); }
 .call.live { background: var(--red); }
-.call.connecting { background: var(--mut); }
+.call.connecting { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+.microw { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px;
+  color: var(--mut); font-size: 12px; }
+.microw select { max-width: 260px; }
 .status { color: var(--mut); margin-top: 12px; min-height: 20px; font-size: 14px; }
 .status.live { color: var(--ink); }
 .meter { height: 6px; background: #0e1016; border-radius: 3px; margin: 14px auto 0; max-width: 320px; overflow: hidden; }

@@ -24,7 +24,9 @@ from .prompts import GREETING
 WEB = Path(__file__).parent / "web"
 _VARIANTS = {"lexical", "semantic", "auto", "lexical_only"}
 FILLERS = ["Sure, let me check that for you.", "One moment while I look that up.",
-           "Let me find that for you.", "Okay, just a second."]
+           "Let me find that for you.", "Okay, just a second.", "Good question — let me see.",
+           "Let me pull that up for you.", "Alright, checking on that now.",
+           "Give me just a moment."]
 
 
 class Agent:
@@ -40,7 +42,9 @@ class Agent:
         self.lock = threading.Lock()
         self.deepgram = self._deepgram()
         self.eleven = self._eleven()
-        self._fillers: dict[str, str] = {}   # phrase -> audio_b64 (synth once)
+        self._fillers: dict[str, str] = {}   # phrase -> audio_b64 (pre-synth once at startup)
+        for _ph in FILLERS:
+            self._fillers[_ph] = self.tts_b64(_ph)
 
     def _deepgram(self):
         if self.settings.deepgram_api_key:
@@ -62,9 +66,10 @@ class Agent:
     def filler(self) -> dict:
         import random
         text = random.choice(FILLERS)
-        if text not in self._fillers:
-            self._fillers[text] = self.tts_b64(text)   # synth once, then cached
-        return {"text": text, "audio_b64": self._fillers[text]}
+        return {"text": text, "audio_b64": self._fillers.get(text, "")}
+
+    def all_fillers(self) -> list[str]:
+        return [self._fillers[p] for p in FILLERS if self._fillers.get(p)]
 
     def tts_b64(self, text: str) -> str:
         if not (text and self.eleven):
@@ -74,22 +79,28 @@ class Agent:
         except Exception:
             return ""   # graceful: UI still shows the text
 
-    def turn_from_text(self, text: str) -> dict:
+    def turn_from_text(self, text: str, stt_ms: float = 0.0) -> dict:
         with self.lock:
             self.orch.ab.variant = self.variant
             self.turn += 1
+            t0 = time.perf_counter()
             r = self.orch.handle_turn(self.call_id, self.turn, text)
+            pipeline_ms = (time.perf_counter() - t0) * 1000.0
+        t1 = time.perf_counter()
+        audio = self.tts_b64(r.response or "")
+        tts_ms = (time.perf_counter() - t1) * 1000.0
         return {
             "transcript": r.utterance,
             "response": r.response,
             "outcome": r.outcome,
             "served_path": r.served_path,
             "latency_ms": round(r.total_latency_ms),
+            "stt_ms": round(stt_ms), "pipeline_ms": round(pipeline_ms), "tts_ms": round(tts_ms),
             "variant": self.variant,
             "gate": r.gate.reason,
             "lexical_candidate": r.lexical.candidate_response,
             "semantic_candidate": (r.semantic.candidate_response if r.semantic else None),
-            "audio_b64": self.tts_b64(r.response or ""),
+            "audio_b64": audio,
         }
 
 
@@ -136,6 +147,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"response": GREETING, "audio_b64": AGENT.tts_b64(GREETING)})
         elif self.path == "/api/filler":
             self._json(AGENT.filler())
+        elif self.path == "/api/fillers":
+            self._json({"fillers": AGENT.all_fillers()})
         else:
             self._json({"error": "not found"}, 404)
 
@@ -163,13 +176,15 @@ class Handler(BaseHTTPRequestHandler):
             if v:
                 AGENT.set_variant(v)
             ctype = self.headers.get("Content-Type", "audio/webm")
+            t0 = time.perf_counter()
             try:
                 text = AGENT.deepgram.transcribe_bytes(self._body(), ctype).strip()
             except Exception as e:
                 self._json({"error": f"stt failed: {e}"}, 502)
                 return
-            self._json(AGENT.turn_from_text(text) if text else {"transcript": "", "response": None,
-                                                                "outcome": "no_input", "audio_b64": ""})
+            stt_ms = (time.perf_counter() - t0) * 1000.0
+            self._json(AGENT.turn_from_text(text, stt_ms) if text else {"transcript": "", "response": None,
+                                                                        "outcome": "no_input", "audio_b64": ""})
         else:
             self._json({"error": "not found"}, 404)
 

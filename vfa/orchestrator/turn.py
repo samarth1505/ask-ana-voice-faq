@@ -93,27 +93,24 @@ class Orchestrator:
             # verbatim on the lexical arm -> defer to the grounded LLM summary.
             if served == "lexical" and lex.top and not lex.top.early_exit_eligible:
                 served = "semantic"
-            # answerability: semantic path trusts the cross-encoder reranker (reliable ~0 for
-            # out-of-KB); lexical path uses its BM25-normalised top score. Too weak -> escalate,
-            # so we never speak a topically-wrong-but-internally-grounded answer.
             if served == "semantic":
-                support, thresh = (reranked[0].score if reranked else 0.0), s.tau_rerank
-            else:
-                support, thresh = lex.top_score, s.tau_answerable
-            if support < thresh:
-                outcome, served_path, response = "escalated_unanswerable", "escalation", self._escalate(
-                    call_id, turn_id, utterance, f"served '{served}' support {support:.2f} < threshold {thresh:.2f}")
-            elif served == "semantic":
+                # LLM-first answerability: the LLM replies INSUFFICIENT_CONTEXT (-> empty) when
+                # the context can't answer, and the grounding guard catches fabricated numbers.
+                # No reranker pre-gate, so paraphrases/edge cases get a grounded answer instead
+                # of collapsing to a human handoff. (floor check above already caught empty retrieval)
                 if gr_sem and gr_sem.passed and sem.candidate_response:
                     outcome, served_path, response = "resolved", "semantic", sem.candidate_response
                     self._live_tts(response)
                 else:
                     outcome, served_path, response = "escalated_grounding", "escalation", self._escalate(
-                        call_id, turn_id, utterance, "grounding failed on semantic candidate")
-            else:  # lexical variant serves the (grounded-by-construction) KB answer
-                outcome, served_path, response = "resolved", "lexical", (lex.candidate_response or "")
-                self._live_tts(response)
-                # filler would arm here in production on a slow turn; deferred in POC
+                        call_id, turn_id, utterance, "LLM declined (insufficient context) or grounding failed")
+            else:  # explicit lexical variant: serve the BM25 answer, gated on its own score
+                if lex.top_score < s.tau_answerable:
+                    outcome, served_path, response = "escalated_unanswerable", "escalation", self._escalate(
+                        call_id, turn_id, utterance, f"lexical support {lex.top_score:.2f} < tau_answerable")
+                else:
+                    outcome, served_path, response = "resolved", "lexical", (lex.candidate_response or "")
+                    self._live_tts(response)
 
         # hard safety net: never speak card-like digit runs, whatever the path/model produced
         if outcome in ("resolved", "early_exit") and response and has_card_digits(response):

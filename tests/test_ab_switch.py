@@ -20,13 +20,11 @@ class TestABSwitch(unittest.TestCase):
     def test_lexical_only_skips_semantic(self):
         self.assertTrue(ABSwitch(Settings(ab_variant="lexical_only")).skip_semantic)
 
-    def test_auto_routes_confident_short_query_to_lexical(self):
+    def test_auto_is_llm_first(self):
+        # LLM-first: everything past the early-exit routes to the semantic (LLM) path
         sw = ABSwitch(Settings(ab_variant="auto", tau_bm25=0.6))
-        self.assertEqual(sw.select("what are the fees", _lex(0.95, 0.2), None), "lexical")
-
-    def test_auto_routes_weak_query_to_semantic(self):
-        sw = ABSwitch(Settings(ab_variant="auto", tau_bm25=0.6))
-        self.assertEqual(sw.select("my payment seems to have some problem today", _lex(0.3, 0.25), None), "semantic")
+        self.assertEqual(sw.select("what are the fees", _lex(0.95, 0.2), None), "semantic")
+        self.assertEqual(sw.select("some vague payment problem", _lex(0.3, 0.25), None), "semantic")
 
 
 if __name__ == "__main__":
