@@ -40,7 +40,7 @@ def _pg_ok() -> bool:
 class TestOpenSearchLexical(unittest.TestCase):
     def test_index_and_search(self):
         from vfa.retrieval.opensearch_store import OpenSearchLexical
-        s = OpenSearchLexical(OS_URL)
+        s = OpenSearchLexical(OS_URL, index="vfa_faq_test")   # isolated from a running server
         s.index(KB)
         hits = s.search("when will my refund come", 5)
         self.assertTrue(hits)
@@ -52,7 +52,7 @@ class TestOpenSearchLexical(unittest.TestCase):
 class TestPgVectorSemantic(unittest.TestCase):
     def test_index_and_search(self):
         from vfa.retrieval.pgvector_store import PgVectorSemantic
-        s = PgVectorSemantic(PG_URL)
+        s = PgVectorSemantic(PG_URL, table="kb_vectors_test")   # isolated from a running server
         s.index(KB)
         hits = s.search("when will my refund come", 5)
         self.assertTrue(hits)

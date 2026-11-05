@@ -16,15 +16,17 @@ class ElevenLabsTTS:
         self._model = model_id
         self._timeout = timeout_ms / 1000.0
 
-    def synthesize(self, text: str, out_path: str) -> str:
+    def synthesize_bytes(self, text: str) -> bytes:
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{self._voice}"
         body = json.dumps({"text": text, "model_id": self._model}).encode("utf-8")
         req = urllib.request.Request(url, data=body, method="POST", headers={
             "xi-api-key": self._key, "Content-Type": "application/json", "Accept": "audio/mpeg",
         })
         with urllib.request.urlopen(req, timeout=self._timeout) as r:
-            audio = r.read()
+            return r.read()
+
+    def synthesize(self, text: str, out_path: str) -> str:
         p = Path(out_path)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_bytes(audio)
+        p.write_bytes(self.synthesize_bytes(text))
         return str(p)

@@ -68,6 +68,25 @@ class TestOrchestrator(unittest.TestCase):
             orch.handle_turn("c", 2, "What are the fees for using UPI?")
             self.assertEqual(orch.shadow.count(), 2)
 
+    def test_explicit_human_with_trailing_punctuation(self):
+        # regression: "human?" must still be detected as an explicit human request
+        with tempfile.TemporaryDirectory() as d:
+            orch = build_offline(self._settings(d), KB)
+            r = orch.handle_turn("c", 1, "can I talk to a human?")
+            self.assertEqual(r.outcome, "escalated_explicit")
+
+    def test_card_numbers_are_never_spoken(self):
+        # regression: a chunk with card digits must not be served verbatim on any path
+        with tempfile.TemporaryDirectory() as d:
+            kb = [KBChunk(type="faq", question="do you have test cards",
+                          canonical_answer="Test cards: Visa 4386289407660153 and Mastercard 5104015555555558.")]
+            s = self._settings(d, ab_variant="lexical", tau_bm25=0.1, tau_floor=0.0,
+                               tau_answerable=0.0, tau_rerank=0.0)
+            orch = build_offline(s, kb)
+            r = orch.handle_turn("c", 1, "do you have test cards for integration")
+            self.assertTrue(r.outcome.startswith("escalated"))
+            self.assertNotIn("4386289407660153", r.response or "")
+
 
 if __name__ == "__main__":
     unittest.main()

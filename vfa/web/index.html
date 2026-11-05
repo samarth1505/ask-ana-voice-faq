@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Priya — Payments Voice Agent</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>Priya <span class="sub">payments voice agent</span></h1>
+      <div class="ab">
+        <label for="variant">A/B path</label>
+        <select id="variant" title="Which retrieval path answers">
+          <option value="auto">auto (router)</option>
+          <option value="lexical">lexical (BM25)</option>
+          <option value="semantic">semantic (LLM)</option>
+          <option value="lexical_only">lexical_only (kill switch)</option>
+        </select>
+      </div>
+    </header>
+
+    <section class="stage">
+      <button id="call" class="call idle">Start call</button>
+      <div id="status" class="status">Tap “Start call”, then just talk. Press “End call” to hang up.</div>
+      <div class="meter"><div id="level"></div></div>
+    </section>
+
+    <section id="log" class="log" aria-live="polite"></section>
+
+    <footer>
+      <form id="textForm" class="textrow">
+        <input id="textIn" type="text" placeholder="…or type a question (fallback)" autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+      <div id="backends" class="backends"></div>
+    </footer>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

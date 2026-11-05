@@ -20,9 +20,10 @@ from ..grounding.guard import GroundingGuard
 from ..llm.base import Synthesizer
 from ..prompts import ESCALATION_LINE, HUMAN_REQUEST_WORDS
 from ..redact import PIIRedactor
+from ..util.text import token_set
 from ..rerank.reranker import Reranker
 from ..retrieval.base import Retriever
-from ..schemas import GroundingResult, KBChunk, PathResult, ShadowRow, TurnResult
+from ..schemas import GroundingResult, KBChunk, PathResult, ShadowRow, TurnResult, has_card_digits
 from ..shadow.logger import ShadowLogger
 from ..stt.base import Transcriber
 from ..tts.base import TTS
@@ -52,7 +53,7 @@ class Orchestrator:
 
         utterance = self.transcriber.transcribe(audio)
         utterance, _pii_hits = self.redactor.redact(utterance)
-        explicit_human = any(w in utterance.lower().split() for w in HUMAN_REQUEST_WORDS)
+        explicit_human = bool(token_set(utterance) & HUMAN_REQUEST_WORDS)   # punctuation-safe
 
         # --- retrieve both paths (both always run, for the shadow log) ---
         lex = self._retrieve(self.lexical, utterance, s.top_k)
@@ -88,6 +89,10 @@ class Orchestrator:
             self._serve_early_exit_audio(gate.chunk_id, response)
         else:
             served = self.ab.select(utterance, lex, sem)
+            # a non-voice-safe chunk (too long, or containing card digits) must never be read
+            # verbatim on the lexical arm -> defer to the grounded LLM summary.
+            if served == "lexical" and lex.top and not lex.top.early_exit_eligible:
+                served = "semantic"
             # answerability: semantic path trusts the cross-encoder reranker (reliable ~0 for
             # out-of-KB); lexical path uses its BM25-normalised top score. Too weak -> escalate,
             # so we never speak a topically-wrong-but-internally-grounded answer.
@@ -109,6 +114,11 @@ class Orchestrator:
                 outcome, served_path, response = "resolved", "lexical", (lex.candidate_response or "")
                 self._live_tts(response)
                 # filler would arm here in production on a slow turn; deferred in POC
+
+        # hard safety net: never speak card-like digit runs, whatever the path/model produced
+        if outcome in ("resolved", "early_exit") and response and has_card_digits(response):
+            outcome, served_path, response = "escalated_unanswerable", "escalation", self._escalate(
+                call_id, turn_id, utterance, "response contained card-like digits; not read aloud")
 
         total_ms = (time.perf_counter() - t0) * 1000.0
 

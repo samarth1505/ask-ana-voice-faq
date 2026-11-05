@@ -14,10 +14,12 @@ _TABLE = "kb_vectors"
 class PgVectorSemantic:
     name = "semantic"
 
-    def __init__(self, dsn: str, embedder: Embedder | None = None, timeout: float = 3.0) -> None:
+    def __init__(self, dsn: str, embedder: Embedder | None = None, timeout: float = 3.0,
+                 table: str = _TABLE) -> None:
         import psycopg  # lazy
         self._embedder = embedder or FakeEmbedder()
         self._dim = self._embedder.dim
+        self._table = table
         self._conn = psycopg.connect(dsn, connect_timeout=int(timeout))
         self._conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         self._conn.commit()
@@ -35,9 +37,9 @@ class PgVectorSemantic:
             return False
 
     def index(self, chunks: list[KBChunk]) -> None:
-        self._conn.execute(f"DROP TABLE IF EXISTS {_TABLE}")
+        self._conn.execute(f"DROP TABLE IF EXISTS {self._table}")
         self._conn.execute(
-            f"CREATE TABLE {_TABLE} ("
+            f"CREATE TABLE {self._table} ("
             " chunk_id TEXT PRIMARY KEY, type TEXT, topic TEXT, answer TEXT,"
             " early_exit_eligible BOOLEAN, embedding vector(%s))" % self._dim
         )
@@ -45,7 +47,7 @@ class PgVectorSemantic:
             for c in chunks:
                 vec = self._lit(self._embedder.embed(c.question or c.text))
                 cur.execute(
-                    f"INSERT INTO {_TABLE} VALUES (%s,%s,%s,%s,%s,%s::vector)",
+                    f"INSERT INTO {self._table} VALUES (%s,%s,%s,%s,%s,%s::vector)",
                     (c.chunk_id, c.type, c.topic, c.answer, c.early_exit_eligible, vec),
                 )
         self._conn.commit()
@@ -54,7 +56,7 @@ class PgVectorSemantic:
         qv = self._lit(self._embedder.embed(query))
         rows = self._conn.execute(
             f"SELECT chunk_id, type, topic, answer, early_exit_eligible,"
-            f" 1 - (embedding <=> %s::vector) AS sim FROM {_TABLE}"
+            f" 1 - (embedding <=> %s::vector) AS sim FROM {self._table}"
             f" ORDER BY embedding <=> %s::vector LIMIT %s",
             (qv, qv, k),
         ).fetchall()

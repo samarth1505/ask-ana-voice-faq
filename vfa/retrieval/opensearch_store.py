@@ -21,11 +21,13 @@ def _synonym_lines() -> list[str]:
 class OpenSearchLexical:
     name = "lexical"
 
-    def __init__(self, url: str, score_k: float = 8.0, timeout: float = 3.0) -> None:
+    def __init__(self, url: str, score_k: float = 8.0, timeout: float = 3.0,
+                 index: str = _INDEX) -> None:
         from opensearchpy import OpenSearch  # lazy
         self._score_k = score_k
+        self._index = index
         self._client = OpenSearch(hosts=[url], http_compress=True, timeout=timeout,
-                                  max_retries=1, retry_on_timeout=False)
+                                  max_retries=1, retry_on_timeout=False)  # noqa: E501
 
     def health(self) -> bool:
         try:
@@ -34,9 +36,9 @@ class OpenSearchLexical:
             return False
 
     def index(self, chunks: list[KBChunk]) -> None:
-        if self._client.indices.exists(index=_INDEX):
-            self._client.indices.delete(index=_INDEX)
-        self._client.indices.create(index=_INDEX, body={
+        if self._client.indices.exists(index=self._index):
+            self._client.indices.delete(index=self._index)
+        self._client.indices.create(index=self._index, body={
             "settings": {
                 "analysis": {
                     "filter": {"vfa_syn": {"type": "synonym", "synonyms": _synonym_lines()}},
@@ -56,14 +58,14 @@ class OpenSearchLexical:
             }},
         })
         for c in chunks:
-            self._client.index(index=_INDEX, id=c.chunk_id, body={
+            self._client.index(index=self._index, id=c.chunk_id, body={
                 "chunk_id": c.chunk_id, "question": c.question, "answer": c.answer,
                 "type": c.type, "topic": c.topic, "early_exit_eligible": c.early_exit_eligible,
             })
-        self._client.indices.refresh(index=_INDEX)
+        self._client.indices.refresh(index=self._index)
 
     def search(self, query: str, k: int = 5) -> list[RetrievedChunk]:
-        res = self._client.search(index=_INDEX, body={
+        res = self._client.search(index=self._index, body={
             "size": k,
             "query": {"multi_match": {
                 "query": query,

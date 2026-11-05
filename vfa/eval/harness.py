@@ -18,6 +18,7 @@ from ..config import Settings, load_settings
 from ..factory import build_auto
 from ..kb.ingest import load_kb
 from ..prompts import HUMAN_REQUEST_WORDS
+from ..util.text import token_set
 from .dataset import EvalExample, load_evalset
 
 _QWORDS = {"what", "when", "where", "which", "how", "who", "is", "are", "do", "does", "can"}
@@ -71,7 +72,7 @@ def capture(orch, utterance: str, k: int, rerank_top_n: int) -> Signals:
     reranked = orch.reranker.rerank(utterance, sem, rerank_top_n) if sem else []
     words = utterance.strip().lower().split()
     return Signals(
-        explicit_human=any(w in words for w in HUMAN_REQUEST_WORDS),
+        explicit_human=bool(token_set(utterance) & HUMAN_REQUEST_WORDS),
         lex_top_id=(lex[0].chunk_id if lex else None),
         lex_top_score=(lex[0].score if lex else 0.0),
         lex_top_type=(lex[0].type if lex else "faq"),

@@ -15,8 +15,13 @@ VOICE_MAX_WORDS = 50
 _CARD_DIGITS = re.compile(r"\d(?:[ -]?\d){11,18}")
 
 
+def has_card_digits(text: str) -> bool:
+    """True if the text contains a card/Aadhaar-like run of digits (must not be spoken)."""
+    return _CARD_DIGITS.search(text) is not None
+
+
 def voice_eligible(answer: str) -> bool:
-    return len(answer.split()) <= VOICE_MAX_WORDS and _CARD_DIGITS.search(answer) is None
+    return len(answer.split()) <= VOICE_MAX_WORDS and not has_card_digits(answer)
 
 ChunkType = Literal["faq", "policy"]
 PathName = Literal["lexical", "semantic"]

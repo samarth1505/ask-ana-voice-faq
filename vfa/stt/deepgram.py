@@ -17,12 +17,17 @@ class DeepgramTranscriber:
         self._ct = content_type
         self._timeout = timeout_ms / 1000.0
 
-    def transcribe(self, audio: str) -> str:
-        data = Path(audio).read_bytes()
+    def _post(self, data: bytes, content_type: str) -> str:
         url = f"https://api.deepgram.com/v1/listen?model={self._model}&smart_format=true"
         req = urllib.request.Request(url, data=data, method="POST", headers={
-            "Authorization": f"Token {self._key}", "Content-Type": self._ct,
+            "Authorization": f"Token {self._key}", "Content-Type": content_type,
         })
         with urllib.request.urlopen(req, timeout=self._timeout) as r:
             j = json.loads(r.read())
         return j["results"]["channels"][0]["alternatives"][0]["transcript"].strip()
+
+    def transcribe(self, audio: str) -> str:
+        return self._post(Path(audio).read_bytes(), self._ct)
+
+    def transcribe_bytes(self, data: bytes, content_type: str | None = None) -> str:
+        return self._post(data, content_type or self._ct)
