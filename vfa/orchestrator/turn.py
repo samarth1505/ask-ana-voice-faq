@@ -23,8 +23,10 @@ from ..redact import PIIRedactor
 from ..util.text import token_set
 from ..rerank.reranker import Reranker
 from ..retrieval.base import Retriever
-from ..schemas import GroundingResult, KBChunk, PathResult, ShadowRow, TurnResult, has_card_digits
+from ..schemas import (GateDecision, GroundingResult, KBChunk, PathResult, ShadowRow,
+                       TurnResult, has_card_digits)
 from ..shadow.logger import ShadowLogger
+from ..smalltalk import classify as classify_smalltalk
 from ..stt.base import Transcriber
 from ..tts.base import TTS
 from ..tts.cache import AudioCache
@@ -53,6 +55,15 @@ class Orchestrator:
 
         utterance = self.transcriber.transcribe(audio)
         utterance, _pii_hits = self.redactor.redact(utterance)
+
+        # Pre-retrieval conversational layer: greetings / thanks / goodbye / "are you a bot?"
+        # get a canned, FACT-FREE reply instead of a KB miss. Runs before the explicit-human
+        # check so "are you a human?" (an identity question) is answered, not escalated, while
+        # "connect me to a human" (no identity-question form) still falls through to escalate.
+        st = classify_smalltalk(utterance)
+        if st:
+            return self._smalltalk_turn(call_id, turn_id, utterance, st[0], st[1], t0)
+
         explicit_human = bool(token_set(utterance) & HUMAN_REQUEST_WORDS)   # punctuation-safe
 
         # --- retrieve both paths (both always run, for the shadow log) ---
@@ -130,6 +141,20 @@ class Orchestrator:
         return result
 
     # ---- helpers -----------------------------------------------------------
+    def _smalltalk_turn(self, call_id: str, turn_id: int, utterance: str,
+                        intent: str, reply: str, t0: float) -> TurnResult:
+        """Serve a canned conversational reply — no retrieval, no LLM, no KB touched."""
+        self._live_tts(reply)
+        gate = GateDecision(early_exit=False, reason=f"smalltalk:{intent}")
+        result = TurnResult(
+            call_id=call_id, turn_id=turn_id, utterance=utterance, served_path="smalltalk",
+            response=reply, outcome="smalltalk", active_variant=self.ab.variant, gate=gate,
+            grounding={}, lexical=PathResult(path="lexical"), semantic=None,
+            total_latency_ms=(time.perf_counter() - t0) * 1000.0,
+        )
+        self._log(result, None, None)
+        return result
+
     def _retrieve(self, retriever: Retriever, utterance: str, k: int) -> PathResult:
         t = time.perf_counter()
         hits = retriever.search(utterance, k)

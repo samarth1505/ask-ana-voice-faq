@@ -26,7 +26,7 @@ def voice_eligible(answer: str) -> bool:
 ChunkType = Literal["faq", "policy"]
 PathName = Literal["lexical", "semantic"]
 Variant = Literal["lexical", "semantic", "auto", "lexical_only"]
-Outcome = Literal["resolved", "early_exit", "escalated_grounding", "escalated_floor",
+Outcome = Literal["resolved", "early_exit", "smalltalk", "escalated_grounding", "escalated_floor",
                   "escalated_unanswerable", "escalated_explicit", "no_input"]
 
 

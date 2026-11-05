@@ -75,6 +75,22 @@ class TestOrchestrator(unittest.TestCase):
             r = orch.handle_turn("c", 1, "can I talk to a human?")
             self.assertEqual(r.outcome, "escalated_explicit")
 
+    def test_greeting_is_smalltalk_not_escalation(self):
+        # a bare "hi" must get a conversational reply, never a KB-miss escalation
+        with tempfile.TemporaryDirectory() as d:
+            orch = build_offline(self._settings(d, tau_floor=0.99), KB)
+            r = orch.handle_turn("c", 1, "hi there")
+            self.assertEqual(r.outcome, "smalltalk")
+            self.assertEqual(r.served_path, "smalltalk")
+            self.assertIn("Priya", r.response or "")
+
+    def test_bot_question_answered_not_escalated_to_human(self):
+        # "are you a human?" is an identity question -> disclosure, NOT a human handoff
+        with tempfile.TemporaryDirectory() as d:
+            orch = build_offline(self._settings(d), KB)
+            r = orch.handle_turn("c", 1, "are you a human?")
+            self.assertEqual(r.outcome, "smalltalk")
+
     def test_card_numbers_are_never_spoken(self):
         # regression: a chunk with card digits must not be served verbatim on any path
         with tempfile.TemporaryDirectory() as d:

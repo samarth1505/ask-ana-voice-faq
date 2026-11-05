@@ -71,6 +71,15 @@ class Agent:
     def all_fillers(self) -> list[str]:
         return [self._fillers[p] for p in FILLERS if self._fillers.get(p)]
 
+    def report(self) -> dict:
+        """Unanswered-questions report built live from this run's shadow log."""
+        from dataclasses import asdict
+        from .report import build_report, load_turns
+        try:
+            return asdict(build_report(load_turns(self.settings.shadow_db)))
+        except Exception as e:
+            return {"error": str(e)}
+
     def tts_b64(self, text: str) -> str:
         if not (text and self.eleven):
             return ""
@@ -149,6 +158,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(AGENT.filler())
         elif self.path == "/api/fillers":
             self._json({"fillers": AGENT.all_fillers()})
+        elif self.path == "/api/report":
+            self._json(AGENT.report())
         else:
             self._json({"error": "not found"}, 404)
 
