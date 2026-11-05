@@ -82,7 +82,7 @@ class TestOrchestrator(unittest.TestCase):
             r = orch.handle_turn("c", 1, "hi there")
             self.assertEqual(r.outcome, "smalltalk")
             self.assertEqual(r.served_path, "smalltalk")
-            self.assertIn("Ask Ana", r.response or "")
+            self.assertIn("Ana", r.response or "")
 
     def test_bot_question_answered_not_escalated_to_human(self):
         # "are you a human?" is an identity question -> disclosure, NOT a human handoff

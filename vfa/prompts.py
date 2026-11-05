@@ -1,6 +1,6 @@
 """Fixed spoken lines (pre-synth'd in production; design §10)."""
 
-GREETING = ("Hi, I'm Ask Ana, the automated assistant. This call may be recorded for "
+GREETING = ("Hi, I'm Ana, the automated assistant. This call may be recorded for "
             "quality. For your safety, please don't share card numbers, PINs, or OTPs. "
             "How can I help?")
 
