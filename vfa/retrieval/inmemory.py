@@ -1,4 +1,4 @@
-"""In-memory POC retrievers — the offline stand-ins for OpenSearch (lexical) and
+"""In-memory retrievers — the offline stand-ins for OpenSearch (lexical) and
 Qdrant/pgvector (semantic). Same `Retriever` interface, so real backends drop in later.
 
 Lexical = surface-token overlap with a 2x boost on the FAQ `question` field

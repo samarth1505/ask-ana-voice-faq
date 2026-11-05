@@ -1,4 +1,4 @@
-"""Retriever interface shared by in-memory (POC), OpenSearch, and pgvector backends."""
+"""Retriever interface shared by in-memory, OpenSearch, and pgvector backends."""
 from __future__ import annotations
 
 from typing import Protocol

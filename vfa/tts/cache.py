@@ -1,5 +1,5 @@
 """Pre-synth audio cache (design §5/§8/R11, A21). Maps chunk_id -> audio file on disk
-(local-disk stands in for Cloudflare R2 in the POC). Stores an audio_hash alongside so a
+(local-disk stands in for Cloudflare R2). Stores an audio_hash alongside so a
 stale/mismatched entry fails forward to live TTS instead of playing stale audio.
 """
 from __future__ import annotations

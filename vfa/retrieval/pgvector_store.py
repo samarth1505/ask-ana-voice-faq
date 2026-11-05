@@ -1,6 +1,6 @@
 """pgvector semantic retriever (design §6/§8/R8/D6). Stores the embedder's vectors in
 Postgres and ranks by cosine. Uses the SAME embedder as query time (one model, index and
-query). In the POC that's the 256-d FakeEmbedder — no ML wheels — so this exercises the
+query). Offline that's the 256-d FakeEmbedder — no ML wheels — so this exercises the
 real DB path while staying offline-safe.
 """
 from __future__ import annotations

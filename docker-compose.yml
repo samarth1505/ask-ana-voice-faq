@@ -1,6 +1,6 @@
-# Local self-hosted stack for the POC. Start with:  docker compose up -d
+# Local self-hosted stack. Start with:  docker compose up -d
 # Only two containers: OpenSearch (BM25 lexical) + Postgres/pgvector (vectors + KB meta).
-# Redis, Langfuse, Grafana, Qdrant are deferred for the POC.
+# Redis, Langfuse, Grafana, Qdrant are deferred.
 
 services:
   opensearch:

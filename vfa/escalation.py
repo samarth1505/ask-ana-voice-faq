@@ -1,4 +1,4 @@
-"""Callback + ticket writer (design §6/A22). POC = append a JSON line to a local log
+"""Callback + ticket writer (design §6/A22). Append a JSON line to a local log
 and return a ticket id (Freshdesk + real Exotel outbound dialing are deferred). The
 ticket references the transcript by pointer, never inline. (design A22/A25)
 """

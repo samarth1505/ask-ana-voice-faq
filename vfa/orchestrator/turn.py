@@ -179,7 +179,7 @@ class Orchestrator:
         try:
             self.tts.synthesize(text, f"{self.settings.audio_dir}/_live_turn.audio")
         except Exception:
-            pass  # POC: TTS failure must not crash the turn (production: fallback engine)
+            pass  # TTS failure must not crash the turn (production: fallback engine)
 
     def _log(self, r: TurnResult, gr_lex: GroundingResult | None, gr_sem: GroundingResult | None) -> None:
         self.shadow.write(ShadowRow(

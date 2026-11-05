@@ -67,7 +67,7 @@ class KBChunk:
 @dataclass
 class RetrievedChunk:
     chunk_id: str
-    score: float          # normalised [0,1] in the POC scorers
+    score: float          # normalised [0,1] in the in-memory scorers
     text: str
     type: ChunkType = "faq"
     topic: str = ""

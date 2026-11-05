@@ -3,7 +3,7 @@
 The fake produces a normalised bag-of-(tokens + char-trigrams) vector so that
 *paraphrases* score higher than pure surface-token overlap — i.e. a genuinely
 different signal from the lexical path, which is what makes the dual-path A/B and
-the triple-lock "agreement" check meaningful in the POC. (design D4/R6)
+the triple-lock "agreement" check meaningful offline. (design D4/R6)
 """
 from __future__ import annotations
 

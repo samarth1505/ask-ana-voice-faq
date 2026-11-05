@@ -1,7 +1,7 @@
 [project]
 name = "voice-faq-agent"
 version = "0.1.0"
-description = "Voice FAQ Agent for Payments — POC (offline-first core)"
+description = "Voice FAQ Agent for Payments (offline-first core)"
 requires-python = ">=3.11"
 
 # The OFFLINE CORE needs nothing beyond the stdlib — it runs and tests on Python 3.14

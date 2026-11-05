@@ -1,6 +1,6 @@
 """Local HTTP server for the browser voice UI.
 
-Single-threaded on purpose (one caller at a time in the POC) so the orchestrator and its
+Single-threaded on purpose (one caller at a time) so the orchestrator and its
 SQLite shadow log stay on one thread. Builds the pipeline ONCE at startup. The server does
 the real STT (Deepgram) and TTS (ElevenLabs) itself; the orchestrator handles the logic on
 text and its internal TTS stays a no-op fake.

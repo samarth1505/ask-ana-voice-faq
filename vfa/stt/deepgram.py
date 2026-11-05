@@ -1,6 +1,6 @@
 """Real Deepgram STT (stdlib urllib), prerecorded endpoint. `transcribe(audio_path)` posts
 the audio bytes and returns the final transcript. Used by the (future) telephony transport;
-the text-driven POC demo keeps FakeTranscriber since there's no audio in simulation. (R4)
+the text-driven demo keeps FakeTranscriber since there's no audio in simulation. (R4)
 """
 from __future__ import annotations
 

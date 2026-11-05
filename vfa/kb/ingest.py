@@ -1,4 +1,4 @@
-"""KB ingest (POC = local loaders; design §8/A20). The GitHub-webhook trigger is deferred.
+"""KB ingest (local loaders; design §8/A20). The GitHub-webhook trigger is deferred.
 Two source formats supported:
   - load_kb_markdown(): the `### Q:` / `**Keywords:**` / `**Answer:**` KB (the real source).
   - load_faqs_csv():     a simple CSV of FAQ pairs (kept as an alt example).

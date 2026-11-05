@@ -1,4 +1,4 @@
-"""STT interface + offline fake. In POC simulation the 'audio' is just text, so the
+"""STT interface + offline fake. In simulation the 'audio' is just text, so the
 fake is identity. Real Deepgram streaming adapter implements the same interface. (R4)
 """
 from __future__ import annotations

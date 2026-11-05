@@ -1,11 +1,11 @@
-# Ask Ana — Voice FAQ Agent for Payments (POC)
+# Ask Ana — Voice FAQ Agent for Payments
 
 **Ana** is a reliability-first voice FAQ agent for payment support. The first-order
 constraint is **zero wrong answers**: below its grounding/answerability bar the agent
 *escalates* (human callback + ticket) instead of guessing. Every spoken fact must trace
 back to the retrieved knowledge base — if it can't, Ana hands off to a human.
 
-> **Status:** proof-of-concept. Offline-first core + real backends wired and verified.
+> **Status:** offline-first core + real backends wired and verified.
 > Telephony is simulated (a browser call UI drives the same per-turn pipeline); the design
 > doc covers the full production plan.
 

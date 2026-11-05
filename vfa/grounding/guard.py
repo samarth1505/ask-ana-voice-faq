@@ -1,7 +1,7 @@
 """Grounding guard (design §6/§8/R13): the sole authority that makes an LLM candidate
 speakable. Returns hard pass/fail; the orchestrator (not the guard) runs escalation.
 
-POC method = deterministic regex matching:
+Method = deterministic regex matching:
   - every numeric/quantitative claim in the response must appear in retrieved context
   - every known payment entity named in the response must appear in context
 Any miss -> FAIL (hard; no retry, no templated guess).

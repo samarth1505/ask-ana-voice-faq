@@ -32,7 +32,7 @@ def _get(key: str, default: str | None = None) -> str | None:
 
 @dataclass(frozen=True)
 class Settings:
-    # --- cloud keys (absent in the POC until the demo) ---
+    # --- cloud keys (absent until the demo) ---
     deepgram_api_key: str | None = None
     groq_api_key: str | None = None
     elevenlabs_api_key: str | None = None
@@ -49,13 +49,13 @@ class Settings:
     shadow_db: str = "./data/shadow.sqlite"
     ab_variant: str = "auto"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
-    reranker_model: str = "BAAI/bge-reranker-base"   # POC: lighter than v2-m3 (~2.3GB) on CPU
+    reranker_model: str = "BAAI/bge-reranker-base"   # lighter than v2-m3 (~2.3GB) on CPU
     groq_model: str = "openai/gpt-oss-20b"           # a chat model this account actually has
     use_real_models: bool = False                     # True -> real BGE embedder+reranker (3.12 venv)
     use_real_tts: bool = False                         # True -> real ElevenLabs TTS (SPENDS credits)
 
     # --- gate thresholds (operate on normalised [0,1] scores; see design §6) ---
-    # NOTE: these are tuned for the in-memory POC scorer. Real OpenSearch BM25 and
+    # NOTE: these are tuned for the in-memory scorer. Real OpenSearch BM25 and
     # a real cross-encoder produce different score scales, so tau MUST be re-tuned
     # per backend on the eval set before trusting the early-exit path. (design D5/R10)
     tau_bm25: float = 0.62        # early-exit lexical floor (triple-lock condition 1)

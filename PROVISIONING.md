@@ -1,6 +1,6 @@
-# Provisioning guide — POC (local-first)
+# Provisioning guide (local-first)
 
-Scope: **proof-of-concept**, run entirely on your Mac. Telephony is **simulated** (mic /
+Scope: runs entirely on your Mac. Telephony is **simulated** (mic /
 browser WebRTC) — no inbound, no real outbound, no tunnel. Everything production-scoped is
 removed or deferred (see the design doc). You need **three cloud sign-ups**; the rest is local.
 
@@ -14,14 +14,14 @@ removed or deferred (see the design doc). You need **three cloud sign-ups**; the
 
 ### 2. Groq — LLM  [free tier]
 - https://console.groq.com/ → **API Keys**.
-- Put it in `GROQ_API_KEY`. Free tier is rate-limited (fine for a POC).
+- Put it in `GROQ_API_KEY`. Free tier is rate-limited (fine to start).
 
 ### 3. ElevenLabs — TTS  [PAID]
 - https://elevenlabs.io/ → Profile → **API Key** → `ELEVENLABS_API_KEY`.
 - Browse the **Voice Library**, pick an Indian-English voice, copy its id → `ELEVENLABS_VOICE_ID`.
 - `ELEVENLABS_MODEL_ID` defaults to a low-latency turbo model — **verify the current name** on
   their docs; it changes.
-- This is the one that costs money. (If you'd rather not pay during the POC, say so and I'll
+- This is the one that costs money. (If you'd rather not pay yet, say so and I'll
   swap in local **Piper** TTS for zero cost.)
 
 ---
@@ -37,11 +37,11 @@ docker compose up -d
 
 Plus, in-process (Python, local model downloads, no key): the embedder (BGE-small),
 reranker (BGE-reranker-v2), and grounding NLI. Audio + transcripts go to `./data/` on disk
-(replacing Cloudflare R2 for the POC). The shadow log is a local SQLite file.
+(replacing Cloudflare R2). The shadow log is a local SQLite file.
 
 ---
 
-## Removed / deferred for the POC (confirmed)
+## Removed / deferred (confirmed)
 
 **Removed:** inbound PSTN, Oracle/Fly hosting, Cloudflare R2, GitHub webhook ingest (replaced
 by a local `ingest.py`).

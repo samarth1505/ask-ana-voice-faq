@@ -1,5 +1,5 @@
-"""Shadow logger (design §9/A18). POC = local SQLite (WAL mode), one row per turn,
-BOTH candidates logged regardless of who served. Postgres drain is deferred for the POC.
+"""Shadow logger (design §9/A18). Local SQLite (WAL mode), one row per turn,
+BOTH candidates logged regardless of who served. Postgres drain is deferred.
 
 Writes are non-blocking in spirit (SQLite WAL ~1 ms); the orchestrator calls this after
 the turn is served so it never sits on the response path.

@@ -1,4 +1,4 @@
-"""Voice FAQ Agent for Payments — POC package.
+"""Voice FAQ Agent for Payments package.
 
 Offline-first: the core turn loop (retrieval, triple-lock gate, grounding guard,
 A/B switch, shadow log, orchestrator) runs with no cloud keys and no Docker, using
