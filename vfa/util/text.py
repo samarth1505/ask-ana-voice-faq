@@ -3,6 +3,7 @@ claim-extraction helpers for the grounding guard. Pure stdlib."""
 from __future__ import annotations
 
 import re
+import unicodedata
 
 # design §8 step 3: synonym dictionary for the Indian-English analyzer.
 SYNONYMS: dict[str, str] = {
@@ -17,14 +18,10 @@ SYNONYMS: dict[str, str] = {
 }
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
-# Numbers, money, percentages, day/business-day durations — the claims a grounding
-# guard must verify against retrieved context (design §6/§11).
-_CLAIM_RE = re.compile(
-    r"(?:₹\s?\d[\d,]*(?:\.\d+)?)"          # ₹1,200
-    r"|(?:\d+(?:\.\d+)?\s?%)"               # 2%
-    r"|(?:\d+\s*[-–]\s*\d+)"                # 5-7
-    r"|(?:\b\d[\d,]*(?:\.\d+)?\b)",         # plain numbers
-)
+# Grounding verifies that every number the answer states appears in the retrieved context.
+# We match on bare digit-runs after normalising formatting, so "2 %" grounds against
+# "2 percent", and narrow spaces / non-breaking hyphens the LLM emits don't cause misses.
+_NUM_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 
 def normalize(text: str) -> str:
@@ -42,27 +39,25 @@ def token_set(text: str) -> set[str]:
     return set(tokenize(text))
 
 
+def _norm_ground(text: str) -> str:
+    t = unicodedata.normalize("NFKC", text)        # narrow/no-break spaces -> normal
+    t = t.replace("%", " percent ")                # "2%" grounds against "2 percent"
+    return re.sub(r"[‐-―−]", "-", t)  # unicode dashes -> ascii
+
+
+def _numbers(text: str) -> list[str]:
+    return [m.replace(",", "") for m in _NUM_RE.findall(_norm_ground(text))]
+
+
 def extract_claims(text: str) -> list[str]:
-    """Numeric/quantitative claims that must trace back to retrieved context."""
-    claims = []
-    for m in _CLAIM_RE.findall(text):
-        c = m.strip()
-        if c:
-            claims.append(_canon_number(c))
-    # de-dupe, keep order
+    """Numeric claims (bare digit-runs) that must trace back to retrieved context."""
     seen, out = set(), []
-    for c in claims:
-        if c not in seen:
-            seen.add(c)
-            out.append(c)
+    for n in _numbers(text):
+        if n not in seen:
+            seen.add(n)
+            out.append(n)
     return out
 
 
-def _canon_number(s: str) -> str:
-    return s.replace(" ", "").replace(",", "").replace("–", "-")
-
-
 def claim_in_context(claim: str, context: str) -> bool:
-    """Does a numeric claim appear in the retrieved context (digits-only match)?"""
-    ctx_numbers = {_canon_number(x) for x in _CLAIM_RE.findall(context)}
-    return _canon_number(claim) in ctx_numbers
+    return claim in set(_numbers(context))

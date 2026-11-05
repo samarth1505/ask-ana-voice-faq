@@ -62,7 +62,7 @@ def _make_synth(settings: Settings) -> tuple[Synthesizer, str]:
     if settings.groq_api_key:
         try:
             from .llm.groq_llm import GroqSynthesizer
-            return GroqSynthesizer(settings.groq_api_key), "Groq(llama-3.3-70b-versatile)"
+            return GroqSynthesizer(settings.groq_api_key, settings.groq_model), f"Groq({settings.groq_model})"
         except Exception as e:
             log.warning("Groq init failed (%s) — falling back to FakeSynthesizer", e)
     return FakeSynthesizer(), "FakeSynthesizer"

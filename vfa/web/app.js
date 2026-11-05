@@ -8,7 +8,7 @@ const SILENCE_MS = 900;      // trailing silence that ends a turn
 const MIN_UTTER_MS = 350;    // ignore sub-blips
 const MAX_UTTER_MS = 15000;  // safety cap
 const START_FRAMES = 7;      // consecutive loud frames to begin a turn (~120ms)
-const BARGE_FRAMES = 13;     // stricter while Priya is speaking (avoid echo self-trigger)
+const BARGE_FRAMES = 7;      // frames of speech needed to interrupt Priya (barge-in)
 
 let calling = false, state = "idle";   // idle|listening|recording|thinking|speaking
 let stream, audioCtx, analyser, buf, raf;
@@ -49,10 +49,37 @@ function altLine(d) {
 function stopPlayback() { if (player) { player.pause(); player = null; } }
 function play(b64, onEnd) {
   stopPlayback();
-  if (!b64) { onEnd && onEnd(); return; }
+  if (!b64) { onEnd && onEnd(); return null; }
   player = new Audio("data:audio/mpeg;base64," + b64);
   player.onended = () => { player = null; onEnd && onEnd(); };
   player.play().catch(() => onEnd && onEnd());
+  return player;
+}
+
+// ---- speculative filler: a short spoken ack so there's never a silent gap ----
+let fillers = [];
+async function prefetchFillers() {
+  fillers = [];
+  for (let i = 0; i < 3; i++) {
+    try { const f = await (await fetch("/api/filler")).json(); if (f.audio_b64) fillers.push(f.audio_b64); } catch (e) {}
+  }
+}
+function playFiller() {
+  if (!fillers.length || !calling) return;
+  setState("speaking", "…");
+  play(fillers[Math.floor(Math.random() * fillers.length)],
+       () => { if (calling && state === "speaking") setState("listening", "Listening…"); });
+}
+// wraps a turn: if the answer isn't back in 400 ms, speak a filler; the answer cuts it off
+async function runTurn(fetchPromise) {
+  setState("thinking", "…");
+  let responded = false;
+  const timer = setTimeout(() => { if (!responded) playFiller(); }, 400);
+  let d;
+  try { d = await fetchPromise; }
+  catch (e) { clearTimeout(timer); if (calling) setState("listening", "Listening…"); return; }
+  responded = true; clearTimeout(timer);
+  speakThen(d);   // play() stops any filler and speaks the answer
 }
 
 // ---------- turn handling ----------
@@ -71,13 +98,10 @@ function speakThen(d) {
   }
 }
 
-async function sendAudio(blob) {
-  setState("thinking", "Thinking…");
-  try {
-    const r = await fetch("/api/turn_audio", { method: "POST",
-      headers: { "Content-Type": blob.type || "audio/webm", "X-Variant": variantSel.value }, body: blob });
-    speakThen(await r.json());
-  } catch (e) { setState(calling ? "listening" : "idle", "…network error, listening again"); }
+function sendAudio(blob) {
+  runTurn(fetch("/api/turn_audio", { method: "POST",
+    headers: { "Content-Type": blob.type || "audio/webm", "X-Variant": variantSel.value }, body: blob })
+    .then((r) => r.json()));
 }
 
 // ---------- recording lifecycle ----------
@@ -148,6 +172,7 @@ async function startCall() {
     addMsg("her", g.response);
     play(g.audio_b64, () => { if (calling) setState("listening", "Listening…"); });
   } catch (e) { setState("listening", "Listening…"); }
+  prefetchFillers();
   raf = requestAnimationFrame(loop);
 }
 function endCall() {
@@ -164,13 +189,12 @@ callBtn.onclick = () => (calling ? endCall() : startCall());
 
 // ---------- A/B switch + text fallback + health ----------
 variantSel.onchange = () => postJSON("/api/variant", { variant: variantSel.value });
-$("textForm").onsubmit = async (ev) => {
+$("textForm").onsubmit = (ev) => {
   ev.preventDefault();
   const t = $("textIn").value.trim(); if (!t) return;
   $("textIn").value = "";
-  const d = await postJSON("/api/turn_text", { text: t, variant: variantSel.value });
-  if (!d.transcript) d.transcript = t;
-  speakThen(d);
+  runTurn(postJSON("/api/turn_text", { text: t, variant: variantSel.value })
+    .then((d) => { if (!d.transcript) d.transcript = t; return d; }));
 };
 (async () => {
   try {

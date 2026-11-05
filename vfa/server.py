@@ -23,6 +23,8 @@ from .prompts import GREETING
 
 WEB = Path(__file__).parent / "web"
 _VARIANTS = {"lexical", "semantic", "auto", "lexical_only"}
+FILLERS = ["Sure, let me check that for you.", "One moment while I look that up.",
+           "Let me find that for you.", "Okay, just a second."]
 
 
 class Agent:
@@ -38,6 +40,7 @@ class Agent:
         self.lock = threading.Lock()
         self.deepgram = self._deepgram()
         self.eleven = self._eleven()
+        self._fillers: dict[str, str] = {}   # phrase -> audio_b64 (synth once)
 
     def _deepgram(self):
         if self.settings.deepgram_api_key:
@@ -55,6 +58,13 @@ class Agent:
     def set_variant(self, v: str) -> None:
         if v in _VARIANTS:
             self.variant = v
+
+    def filler(self) -> dict:
+        import random
+        text = random.choice(FILLERS)
+        if text not in self._fillers:
+            self._fillers[text] = self.tts_b64(text)   # synth once, then cached
+        return {"text": text, "audio_b64": self._fillers[text]}
 
     def tts_b64(self, text: str) -> str:
         if not (text and self.eleven):
@@ -124,6 +134,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"variant": AGENT.variant})
         elif self.path == "/api/greeting":
             self._json({"response": GREETING, "audio_b64": AGENT.tts_b64(GREETING)})
+        elif self.path == "/api/filler":
+            self._json(AGENT.filler())
         else:
             self._json({"error": "not found"}, 404)
 

@@ -1,54 +1,49 @@
-"""Real Groq synthesizer (stdlib urllib — no extra deps). Grounded-only prompt; any
-error/timeout returns "" so the orchestrator escalates rather than speaks (fail-safe). (R12)
+"""Real Groq synthesizer via the official SDK. Grounded but agentic: answers paraphrased /
+edge-case questions from the retrieved context, states only facts that come from it, and
+replies INSUFFICIENT_CONTEXT only when the context truly doesn't address the question.
 
-Timeout note: the design's 600 ms hard SLO is a production latency target (covered by the
-speculative filler). For POC functional correctness this adapter uses a generous timeout;
-the SLO is enforced at the orchestrator/transport layer, not here.
+Errors are logged (not silently swallowed) and return "" so the orchestrator escalates —
+a visible, fail-safe degrade. (design R12/D8)
 """
 from __future__ import annotations
 
-import json
-import urllib.error
-import urllib.request
+import logging
 
 from ..schemas import RetrievedChunk
 
+log = logging.getLogger("vfa.groq")
+
 SYSTEM_PROMPT = (
-    "You are Priya, a payments support assistant. Answer ONLY using the provided context. "
-    "Every number, policy name, and entity in your answer MUST appear in the context. "
-    "If the context does not contain the answer, reply exactly: INSUFFICIENT_CONTEXT. "
-    "Keep the answer under {max_words} words, warm and natural for speech."
+    "You are Priya, a warm, concise payments support agent on a phone call. "
+    "Use ONLY the information in the context below to help the caller. If the context is "
+    "relevant to what they asked — even if they phrased it differently or asked an adjacent "
+    "question — answer helpfully and naturally. Every specific fact you state (numbers, "
+    "timeframes, percentages, policy names) MUST come from the context; never invent one. "
+    "If the context does not address the question at all, reply with exactly: INSUFFICIENT_CONTEXT. "
+    "Keep it under {max_words} words, friendly and conversational for speech — no lists, no markdown."
 )
 
 
 class GroqSynthesizer:
     SENTINEL = "INSUFFICIENT_CONTEXT"
 
-    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile",
-                 timeout_ms: int = 8000) -> None:
-        self._key = api_key
+    def __init__(self, api_key: str, model: str = "openai/gpt-oss-20b", timeout_ms: int = 8000) -> None:
+        from groq import Groq  # lazy; only needed in real mode
+        self._client = Groq(api_key=api_key, timeout=timeout_ms / 1000.0, max_retries=0)
         self._model = model
-        self._timeout = timeout_ms / 1000.0
 
     def synthesize(self, utterance: str, chunks: list[RetrievedChunk], max_words: int = 50) -> str:
-        context = "\n\n".join(f"[{c.chunk_id}] {c.text}" for c in chunks)
-        body = json.dumps({
-            "model": self._model,
-            "temperature": 0.2,
-            "max_tokens": 160,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT.format(max_words=max_words)},
-                {"role": "user", "content": f"Context:\n{context}\n\nCaller asked: {utterance}"},
-            ],
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.groq.com/openai/v1/chat/completions", data=body, method="POST",
-            headers={"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
-        )
+        context = "\n\n".join(f"- {c.text}" for c in chunks)
         try:
-            with urllib.request.urlopen(req, timeout=self._timeout) as r:
-                data = json.loads(r.read())
-            text = data["choices"][0]["message"]["content"].strip()
-        except Exception:
-            return ""   # fail-safe: empty -> orchestrator runs the callback/escalation flow
+            resp = self._client.chat.completions.create(
+                model=self._model, temperature=0.3, max_tokens=220,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT.format(max_words=max_words)},
+                    {"role": "user", "content": f"Context:\n{context}\n\nCaller asked: {utterance}"},
+                ],
+            )
+            text = (resp.choices[0].message.content or "").strip()
+        except Exception as e:
+            log.warning("Groq call failed: %s", e)   # visible, not swallowed
+            return ""
         return "" if self.SENTINEL in text else text

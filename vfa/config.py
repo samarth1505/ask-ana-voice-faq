@@ -50,6 +50,7 @@ class Settings:
     ab_variant: str = "auto"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     reranker_model: str = "BAAI/bge-reranker-base"   # POC: lighter than v2-m3 (~2.3GB) on CPU
+    groq_model: str = "openai/gpt-oss-20b"           # a chat model this account actually has
     use_real_models: bool = False                     # True -> real BGE embedder+reranker (3.12 venv)
     use_real_tts: bool = False                         # True -> real ElevenLabs TTS (SPENDS credits)
 
@@ -107,6 +108,7 @@ def load_settings(dotenv: bool = True) -> Settings:
         ab_variant=_get("AB_VARIANT", "auto"),
         embedding_model=_get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"),
         reranker_model=_get("RERANKER_MODEL", "BAAI/bge-reranker-base"),
+        groq_model=_get("GROQ_MODEL", "openai/gpt-oss-20b"),
         use_real_models=_real,
         use_real_tts=(_get("VFA_REAL_TTS", "") or "").lower() in ("1", "true", "yes"),
         tau_bm25=_th("TAU_BM25", "tau_bm25", 0.62),
